@@ -5,8 +5,12 @@
 # IDE clutter
 .project
 **/.project
+.cproject
+**/.cproject
 
 # Build artifacts
 test_runner
 *.o
 *.bin
+
+.settings
