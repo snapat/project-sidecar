@@ -1,32 +1,40 @@
-#include "../unity/src/unity.h"
+#include "unity.h"
+#include "monocypher.h"
+#include <string.h>
 
-// --- PART 1: The Mock Logic (Simulating your Firmware) ---
-int verify_crc32(int data) {
-    if (data == 0xDEADBEEF) {
-        return 1; // 1 means Success/True in C
-    }
-    return 0;     // 0 means Failure/False
-}
+/* ==========================================
+   FORWARD DECLARATION
+   (The function we haven't built yet)
+   ========================================== */
+int verify_firmware_signature(const uint8_t* firmware, size_t length, const uint8_t* signature, const uint8_t* public_key);
 
-// --- PART 2: Unity Boilerplate (Required by the tool) ---
 void setUp(void) {}
 void tearDown(void) {}
 
-// --- PART 3: The Actual Tests ---
-void test_verify_crc32_should_PassOnValidSignature(void) {
-    // Assert that passing DEADBEEF returns 1
-    TEST_ASSERT_EQUAL_INT(1, verify_crc32(0xDEADBEEF));
+/* ==========================================
+   TEST CASE 1: The "Hacker" Check
+   ========================================== */
+void test_Bootloader_Should_Reject_Tampered_Firmware(void) {
+    // 1. SETUP: Create a valid "Golden" firmware image
+    uint8_t firmware[4] = {0xAA, 0xBB, 0xCC, 0xDD}; 
+    uint8_t signature[64];
+    uint8_t public_key[32];
+    uint8_t secret_key[32];
+
+    // Generate valid keys (Simulating the factory signing process)
+    crypto_sign_key_pair(public_key, secret_key, crypto_memcmp);
+    crypto_sign(signature, secret_key, public_key, firmware, sizeof(firmware));
+
+    // 2. ATTACK: Tamper with the firmware (Simulate corruption or hacking)
+    firmware[0] = 0x00; // Flip the first byte
+
+    // 3. ASSERT: The verification MUST fail (return 0)
+    int is_valid = verify_firmware_signature(firmware, sizeof(firmware), signature, public_key);
+    TEST_ASSERT_EQUAL_INT(0, is_valid);
 }
 
-void test_verify_crc32_should_FailOnInvalidSignature(void) {
-    // Assert that passing 0x00000000 returns 0
-    TEST_ASSERT_EQUAL_INT(0, verify_crc32(0x00000000));
-}
-
-// --- The Runner ---
 int main(void) {
     UNITY_BEGIN();
-    RUN_TEST(test_verify_crc32_should_PassOnValidSignature);
-    RUN_TEST(test_verify_crc32_should_FailOnInvalidSignature);
+    RUN_TEST(test_Bootloader_Should_Reject_Tampered_Firmware);
     return UNITY_END();
 }
